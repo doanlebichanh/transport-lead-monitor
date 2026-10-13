@@ -87,30 +87,56 @@ def parse_feed(source: dict) -> list[dict]:
 
 
 def parse_xecont(source: dict, html: str) -> list[dict]:
-    match = re.search(r'\\"orders\\":(\[.*?\]),\\"carrierTotal\\"', html, re.DOTALL)
-    if not match:
+    markers = [r"\"orders\":", '"orders":']
+    encoded_orders = None
+    for marker in markers:
+        for match in re.finditer(re.escape(marker), html):
+            candidate = html[match.end() :].lstrip()
+            if candidate.startswith("["):
+                encoded_orders = candidate.replace('\\"', '"')
+                break
+        if encoded_orders is not None:
+            break
+    if encoded_orders is None:
         raise RuntimeError("XECONT public orders data was not found.")
 
     try:
-        orders = json.loads(match.group(1).replace('\\"', '"'))
+        orders, _ = json.JSONDecoder().raw_decode(encoded_orders)
     except json.JSONDecodeError as error:
         raise RuntimeError("XECONT public orders data is invalid.") from error
 
     records = []
     for order in orders:
         contact = order.get("contact") or order.get("shipper") or {}
-        pickup = order.get("pickup") or {}
-        dropoff = order.get("dropoff") or {}
+        pickup = order.get("pickup") or order.get("from") or {}
+        dropoff = order.get("dropoff") or order.get("to") or {}
         route = f"{order.get('route_from', pickup.get('province', ''))} - "
         route += order.get("route_to", dropoff.get("province", ""))
+        container_type = (
+            order.get("container_type")
+            or order.get("equipment")
+            or order.get("vehicle_type")
+            or ""
+        )
+        cargo_type = order.get("cargo_type") or order.get("cargo") or ""
+        quantity = order.get("cont_total") or order.get("quantity") or order.get("container_count") or ""
+        pickup_date = (
+            order.get("pickup_date")
+            or order.get("pickupAt")
+            or order.get("loading_date")
+            or order.get("start_date")
+            or ""
+        )
+        temperature = order.get("temperature") or ""
         content = (
             f"Route: {route}. "
             f"Pickup: {pickup.get('address', '')}. "
             f"Drop-off: {dropoff.get('address', '')}. "
-            f"Cargo: {order.get('cargo_type', '')}. "
-            f"Container: {order.get('container_type', '')}. "
-            f"Quantity: {order.get('cont_total', '')}. "
-            f"Pickup date: {order.get('pickup_date', '')}."
+            f"Cargo: {cargo_type}. "
+            f"Container: {container_type}. "
+            f"Quantity: {quantity}. "
+            f"Temperature: {temperature}. "
+            f"Pickup date: {pickup_date}."
         )
         order_code = order.get("code") or order.get("id", "order")
         records.append(
@@ -120,7 +146,7 @@ def parse_xecont(source: dict, html: str) -> list[dict]:
                 "title": f"{order_code} - {route}",
                 "content": content,
                 "url": f"{source['url']}#order-{order_code}",
-                "published": order.get("posted_at", ""),
+                "published": order.get("posted_at") or order.get("published_at", ""),
                 "phones": [contact["phone"]] if contact.get("phone") else [],
             }
         )
