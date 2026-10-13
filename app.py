@@ -21,6 +21,7 @@ PHONE_PATTERN = re.compile(r"(?<!\d)(?:\+?84|0)(?:[\s().-]*\d){8,10}(?!\d)")
 SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 TELEGRAM_MAX_ATTEMPTS = 3
 TELEGRAM_TIMEOUT_SECONDS = 120
+TELEGRAM_MESSAGE_LIMIT = 3800
 
 
 def normalize_text(value: str) -> str:
@@ -236,39 +237,83 @@ def save_to_database(records: list[dict]) -> None:
                 )
 
 
-def send_telegram(path: str, count: int) -> None:
+def telegram_request(endpoint: str, data: dict, files: dict | None = None) -> None:
+    for attempt in range(1, TELEGRAM_MAX_ATTEMPTS + 1):
+        try:
+            response = requests.post(
+                endpoint,
+                data=data,
+                files=files,
+                timeout=TELEGRAM_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+            result = response.json()
+            if not result.get("ok"):
+                raise RuntimeError(f"Telegram rejected request: {result}")
+            return
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as error:
+            if attempt == TELEGRAM_MAX_ATTEMPTS:
+                raise RuntimeError(
+                    f"Telegram connection failed after {TELEGRAM_MAX_ATTEMPTS} attempts."
+                ) from error
+            print(
+                f"Telegram connection attempt {attempt} failed; "
+                f"retrying in {attempt * 5} seconds."
+            )
+            time.sleep(attempt * 5)
+
+
+def build_telegram_messages(records: list[dict]) -> list[str]:
+    if not records:
+        return ["Transport leads: no matching public records found today."]
+
+    messages = ["Transport leads: {0} matching record(s).".format(len(records))]
+    for index, record in enumerate(records, start=1):
+        phones = "; ".join(record.get("phones", [])) or "Not found"
+        details = (
+            f"\n\n#{index}\n"
+            f"Title: {record['title'] or 'Untitled'}\n"
+            f"Source: {record['source']}\n"
+            f"Published: {record.get('published', '') or 'Unknown'}\n"
+            f"Phones: {phones}\n"
+            f"Content: {record.get('content', '')}\n"
+            f"Link: {record['url']}"
+        )
+        detail_parts = [
+            details[start : start + TELEGRAM_MESSAGE_LIMIT]
+            for start in range(0, len(details), TELEGRAM_MESSAGE_LIMIT)
+        ]
+        if len(messages[-1]) + len(detail_parts[0]) <= TELEGRAM_MESSAGE_LIMIT:
+            messages[-1] += detail_parts.pop(0)
+        for part in detail_parts:
+            messages.append(part)
+    return messages
+
+
+def send_telegram(path: str, records: list[dict]) -> None:
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_ids = [item.strip() for item in os.environ.get("TELEGRAM_CHAT_IDS", "").split(";") if item.strip()]
     if not token or not chat_ids:
         raise RuntimeError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_IDS are required.")
 
-    endpoint = f"https://api.telegram.org/bot{token}/sendDocument"
+    message_endpoint = f"https://api.telegram.org/bot{token}/sendMessage"
+    document_endpoint = f"https://api.telegram.org/bot{token}/sendDocument"
+    messages = build_telegram_messages(records)
     for chat_id in chat_ids:
-        for attempt in range(1, TELEGRAM_MAX_ATTEMPTS + 1):
-            try:
-                with open(path, "rb") as document:
-                    response = requests.post(
-                        endpoint,
-                        data={"chat_id": chat_id, "caption": f"Transport leads: {count} record(s)"},
-                        files={"document": (Path(path).name, document, "text/csv")},
-                        timeout=TELEGRAM_TIMEOUT_SECONDS,
-                    )
-                response.raise_for_status()
-                result = response.json()
-                if not result.get("ok"):
-                    raise RuntimeError(f"Telegram rejected chat {chat_id}: {result}")
-                break
-            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as error:
-                if attempt == TELEGRAM_MAX_ATTEMPTS:
-                    raise RuntimeError(
-                        f"Telegram connection failed for chat {chat_id} "
-                        f"after {TELEGRAM_MAX_ATTEMPTS} attempts."
-                    ) from error
-                print(
-                    f"Telegram connection attempt {attempt} failed; "
-                    f"retrying in {attempt * 5} seconds."
-                )
-                time.sleep(attempt * 5)
+        for message in messages:
+            telegram_request(
+                message_endpoint,
+                {"chat_id": chat_id, "text": message},
+            )
+        with open(path, "rb") as document:
+            telegram_request(
+                document_endpoint,
+                {
+                    "chat_id": chat_id,
+                    "caption": f"CSV attachment: {len(records)} record(s)",
+                },
+                files={"document": (Path(path).name, document, "text/csv")},
+            )
 
 
 def main() -> None:
@@ -296,7 +341,7 @@ def main() -> None:
     append_to_sheet(records)
     save_to_database(records)
     if not args.no_telegram:
-        send_telegram(args.report, len(records))
+        send_telegram(args.report, records)
     print(f"Created {args.report} with {len(records)} matching record(s).")
 
 

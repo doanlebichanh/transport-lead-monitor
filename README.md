@@ -2,7 +2,7 @@
 
 Python pipeline for permitted public RSS/Atom or HTML transport sources.
 
-It filters for 45RF/48RF reefer and configured route terms, removes duplicate URLs, writes a CSV, optionally appends rows to Google Sheets, and sends the CSV to Telegram.
+It filters for 45RF/48RF reefer and configured route terms, removes duplicate URLs, writes a CSV, optionally appends rows to Google Sheets, and sends a detailed summary plus the CSV to Telegram.
 
 ## Configure sources
 
@@ -68,3 +68,5 @@ The default configuration uses public RSS/Atom feeds only. It does not log in to
 ## Report fields
 
 The CSV includes collection time, published time, source, title, public contact phones found in the post, source URL, and a short content field. Verify every lead manually before contacting it. Do not use the pipeline for bulk unsolicited messages.
+
+Telegram receives the matching titles, sources, publication times, public phone numbers found, content, and source links. Long summaries are split into several messages to stay within Telegram's message limit; the CSV is also attached.
