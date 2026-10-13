@@ -142,10 +142,17 @@ def write_csv(records: list[dict], path: str) -> None:
         writer = csv.DictWriter(output, fieldnames=fields)
         writer.writeheader()
         for record in records:
-            writer.writerow({
-                **record,
-                "phones": "; ".join(record.get("phones", [])),
-            })
+            writer.writerow(
+                {
+                    "collected_at": record["collected_at"],
+                    "published": record.get("published", ""),
+                    "source": record["source"],
+                    "title": record["title"],
+                    "phones": "; ".join(record.get("phones", [])),
+                    "url": record["url"],
+                    "content": record["content"],
+                }
+            )
 
 
 def append_to_sheet(records: list[dict]) -> None:
@@ -249,7 +256,7 @@ def send_telegram(path: str, count: int) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="config.json")
+    parser.add_argument("--config", default="sources.json")
     parser.add_argument("--report", default="transport_leads.csv")
     parser.add_argument("--no-telegram", action="store_true")
     args = parser.parse_args()

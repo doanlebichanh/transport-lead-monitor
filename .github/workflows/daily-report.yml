@@ -35,7 +35,7 @@ jobs:
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           GOOGLE_SHEET_WORKSHEET: ${{ vars.GOOGLE_SHEET_WORKSHEET }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: python app.py --config config.json --report transport_leads.csv
+        run: python app.py --config sources.json --report transport_leads.csv
 
       - name: Upload report artifact
         if: always()

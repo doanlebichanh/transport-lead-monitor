@@ -1,14 +1,37 @@
 {
-  "Sources": [],
-  "VehicleTerms": [
+  "sources": [
+    {
+      "name": "VnExpress - Kinh doanh",
+      "url": "https://vnexpress.net/rss/kinh-doanh.rss",
+      "type": "rss"
+    },
+    {
+      "name": "Tuoi Tre - The gioi",
+      "url": "https://tuoitre.vn/rss/the-gioi.rss",
+      "type": "rss"
+    },
+    {
+      "name": "Vietnam News - Industries",
+      "url": "https://vietnamnews.vn/rss/industries.rss",
+      "type": "rss"
+    },
+    {
+      "name": "Google News - reefer logistics",
+      "url": "https://news.google.com/rss/search?q=reefer+container+Vietnam+logistics&hl=en-US&gl=US&ceid=US:en",
+      "type": "rss"
+    }
+  ],
+  "vehicle_terms": [
     "45RF",
     "48RF",
+    "45 RF",
+    "48 RF",
     "container lanh",
     "cont lanh",
     "reefer",
     "thung lanh"
   ],
-  "RouteTerms": [
+  "route_terms": [
     "Campuchia",
     "Cambodia",
     "Moc Bai",
@@ -31,6 +54,14 @@
     "Binh Duong",
     "Dong Nai",
     "Long An",
-    "Can Tho"
-  ]
+    "Can Tho",
+    "Vietnam",
+    "logistics",
+    "shipping",
+    "van tai",
+    "van chuyen",
+    "xuat khau",
+    "hang hai"
+  ],
+  "retention_days": 90
 }
