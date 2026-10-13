@@ -1,0 +1,36 @@
+{
+  "sources": [],
+  "vehicle_terms": [
+    "45RF",
+    "48RF",
+    "45 RF",
+    "48 RF",
+    "container lanh",
+    "cont lanh",
+    "reefer",
+    "thung lanh"
+  ],
+  "route_terms": [
+    "Bac Nam",
+    "Nam Bac",
+    "Campuchia",
+    "Cambodia",
+    "Moc Bai",
+    "Xa Mat",
+    "Tinh Bien",
+    "Ha Tien",
+    "Trung Quoc",
+    "Huu Nghi",
+    "Tan Thanh",
+    "Lao Cai",
+    "Mong Cai",
+    "cua khau",
+    "Phnom Penh",
+    "Ho Chi Minh",
+    "Binh Duong",
+    "Dong Nai",
+    "Long An",
+    "Can Tho"
+  ],
+  "retention_days": 90
+}

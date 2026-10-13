@@ -1,0 +1,7 @@
+beautifulsoup4==4.13.4
+feedparser==6.0.11
+gspread==6.2.1
+google-auth==2.40.3
+psycopg2-binary==2.9.10
+python-dateutil==2.9.0.post0
+requests==2.32.3

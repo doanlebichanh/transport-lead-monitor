@@ -1,0 +1,46 @@
+name: Daily transport leads
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 07:00 Vietnam time (UTC+7)
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  collect-and-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Collect, store, and send report
+        env:
+          CRAWLBASE_TOKEN: ${{ secrets.CRAWLBASE_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_SHEET_WORKSHEET: ${{ vars.GOOGLE_SHEET_WORKSHEET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python app.py --config config.json --report transport_leads.csv
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transport-leads-${{ github.run_number }}
+          path: transport_leads.csv
+          if-no-files-found: ignore
