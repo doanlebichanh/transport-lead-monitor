@@ -61,7 +61,7 @@ Create an optional repository variable named `GOOGLE_SHEET_WORKSHEET`; its defau
 
 For Google Sheets, enable the Sheets API, create a service account, share the spreadsheet with the service account email as Editor, and store the service-account JSON as `GOOGLE_SERVICE_ACCOUNT_JSON`.
 
-The workflow reads `sources.json` and runs at 07:00 Vietnam time because GitHub cron uses UTC. GitHub may start scheduled jobs a few minutes late. Use `workflow_dispatch` to test manually.
+The workflow reads `sources.json` and runs every hour at minute 00. GitHub cron uses UTC, but this schedule is timezone-independent. GitHub may start scheduled jobs a few minutes late. Use `workflow_dispatch` to test manually.
 
 The default configuration uses public RSS/Atom feeds only. It does not log in to social networks or read private groups. RSS results are public industry/news signals and should be verified manually before contacting anyone.
 
