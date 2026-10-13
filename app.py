@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import re
+import time
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +19,8 @@ from google.oauth2.service_account import Credentials
 
 PHONE_PATTERN = re.compile(r"(?<!\d)(?:\+?84|0)(?:[\s().-]*\d){8,10}(?!\d)")
 SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+TELEGRAM_MAX_ATTEMPTS = 3
+TELEGRAM_TIMEOUT_SECONDS = 120
 
 
 def normalize_text(value: str) -> str:
@@ -241,17 +244,31 @@ def send_telegram(path: str, count: int) -> None:
 
     endpoint = f"https://api.telegram.org/bot{token}/sendDocument"
     for chat_id in chat_ids:
-        with open(path, "rb") as document:
-            response = requests.post(
-                endpoint,
-                data={"chat_id": chat_id, "caption": f"Transport leads: {count} record(s)"},
-                files={"document": (Path(path).name, document, "text/csv")},
-                timeout=90,
-            )
-        response.raise_for_status()
-        result = response.json()
-        if not result.get("ok"):
-            raise RuntimeError(f"Telegram rejected chat {chat_id}: {result}")
+        for attempt in range(1, TELEGRAM_MAX_ATTEMPTS + 1):
+            try:
+                with open(path, "rb") as document:
+                    response = requests.post(
+                        endpoint,
+                        data={"chat_id": chat_id, "caption": f"Transport leads: {count} record(s)"},
+                        files={"document": (Path(path).name, document, "text/csv")},
+                        timeout=TELEGRAM_TIMEOUT_SECONDS,
+                    )
+                response.raise_for_status()
+                result = response.json()
+                if not result.get("ok"):
+                    raise RuntimeError(f"Telegram rejected chat {chat_id}: {result}")
+                break
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as error:
+                if attempt == TELEGRAM_MAX_ATTEMPTS:
+                    raise RuntimeError(
+                        f"Telegram connection failed for chat {chat_id} "
+                        f"after {TELEGRAM_MAX_ATTEMPTS} attempts."
+                    ) from error
+                print(
+                    f"Telegram connection attempt {attempt} failed; "
+                    f"retrying in {attempt * 5} seconds."
+                )
+                time.sleep(attempt * 5)
 
 
 def main() -> None:
