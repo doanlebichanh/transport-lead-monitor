@@ -65,6 +65,8 @@ The workflow reads `sources.json` and runs at 07:00 Vietnam time because GitHub 
 
 The default configuration uses public RSS/Atom feeds only. It does not log in to social networks or read private groups. RSS results are public industry/news signals and should be verified manually before contacting anyone.
 
+The configuration also reads the public order data rendered on XECONT.vn. This uses only the public homepage response and does not log in or submit orders. The page may change its format; if that happens, the source is reported as failed while the other feeds continue.
+
 ## Report fields
 
 The CSV includes collection time, published time, source, title, public contact phones found in the post, source URL, and a short content field. Verify every lead manually before contacting it. Do not use the pipeline for bulk unsolicited messages.

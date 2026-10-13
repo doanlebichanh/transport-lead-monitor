@@ -85,6 +85,47 @@ def parse_feed(source: dict) -> list[dict]:
     return records
 
 
+def parse_xecont(source: dict, html: str) -> list[dict]:
+    match = re.search(r'\\"orders\\":(\[.*?\]),\\"carrierTotal\\"', html, re.DOTALL)
+    if not match:
+        raise RuntimeError("XECONT public orders data was not found.")
+
+    try:
+        orders = json.loads(match.group(1).replace('\\"', '"'))
+    except json.JSONDecodeError as error:
+        raise RuntimeError("XECONT public orders data is invalid.") from error
+
+    records = []
+    for order in orders:
+        contact = order.get("contact") or order.get("shipper") or {}
+        pickup = order.get("pickup") or {}
+        dropoff = order.get("dropoff") or {}
+        route = f"{order.get('route_from', pickup.get('province', ''))} - "
+        route += order.get("route_to", dropoff.get("province", ""))
+        content = (
+            f"Route: {route}. "
+            f"Pickup: {pickup.get('address', '')}. "
+            f"Drop-off: {dropoff.get('address', '')}. "
+            f"Cargo: {order.get('cargo_type', '')}. "
+            f"Container: {order.get('container_type', '')}. "
+            f"Quantity: {order.get('cont_total', '')}. "
+            f"Pickup date: {order.get('pickup_date', '')}."
+        )
+        order_code = order.get("code") or order.get("id", "order")
+        records.append(
+            {
+                "source": source["name"],
+                "source_url": source["url"],
+                "title": f"{order_code} - {route}",
+                "content": content,
+                "url": f"{source['url']}#order-{order_code}",
+                "published": order.get("posted_at", ""),
+                "phones": [contact["phone"]] if contact.get("phone") else [],
+            }
+        )
+    return records
+
+
 def parse_html(source: dict, html: str) -> list[dict]:
     soup = BeautifulSoup(html, "html.parser")
     selector = source.get("item_selector", "article, .post, .item, .news-item")
@@ -111,6 +152,14 @@ def parse_html(source: dict, html: str) -> list[dict]:
 def collect_source(source: dict) -> list[dict]:
     if source.get("type", "rss").lower() == "rss":
         return parse_feed(source)
+    html = requests.get(
+        source["url"],
+        headers={"User-Agent": "TransportLeadMonitor/1.0"},
+        timeout=60,
+    )
+    html.raise_for_status()
+    if source.get("type", "").lower() == "xecont":
+        return parse_xecont(source, html.text)
     return parse_html(source, fetch_with_crawlbase(source["url"]))
 
 
@@ -134,7 +183,10 @@ def filter_records(records: list[dict], config: dict) -> list[dict]:
         if key in seen:
             continue
         seen.add(key)
-        record["phones"] = extract_phones(f"{record['title']} {record['content']}")
+        record["phones"] = sorted(
+            set(record.get("phones", []))
+            | set(extract_phones(f"{record['title']} {record['content']}"))
+        )
         record["collected_at"] = datetime.now(timezone.utc).isoformat()
         filtered.append(record)
     return filtered
