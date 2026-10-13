@@ -1,6 +1,7 @@
 import argparse
 import csv
 import hashlib
+import html
 import json
 import os
 import re
@@ -317,19 +318,28 @@ def telegram_request(endpoint: str, data: dict, files: dict | None = None) -> No
 
 def build_telegram_messages(records: list[dict]) -> list[str]:
     if not records:
-        return ["Transport leads: no matching public records found today."]
+        return ["<b>🚚 Transport leads</b>\n\nKhông tìm thấy kết quả phù hợp trong lần quét này."]
 
-    messages = ["Transport leads: {0} matching record(s).".format(len(records))]
+    messages = [
+        "<b>🚚 TRANSPORT LEADS</b>\n"
+        f"🔎 Tìm thấy: <b>{len(records)}</b> kết quả\n"
+        "📌 Nguồn công khai - vui lòng kiểm tra trước khi liên hệ."
+    ]
     for index, record in enumerate(records, start=1):
         phones = "; ".join(record.get("phones", [])) or "Not found"
+        title = html.escape(record["title"] or "Untitled")
+        source = html.escape(record["source"])
+        published = html.escape(record.get("published", "") or "Unknown")
+        content = html.escape(record.get("content", "")[:1200])
+        phone_text = html.escape(phones)
+        link = html.escape(record["url"], quote=True)
         details = (
-            f"\n\n#{index}\n"
-            f"Title: {record['title'] or 'Untitled'}\n"
-            f"Source: {record['source']}\n"
-            f"Published: {record.get('published', '') or 'Unknown'}\n"
-            f"Phones: {phones}\n"
-            f"Content: {record.get('content', '')}\n"
-            f"Link: {record['url']}"
+            f"\n\n<b>📦 Lead #{index}: {title}</b>\n"
+            f"📰 <b>Nguồn:</b> {source}\n"
+            f"🕒 <b>Đăng:</b> {published}\n"
+            f"📞 <b>Điện thoại:</b> {phone_text}\n"
+            f"📝 <b>Chi tiết:</b> {content}\n"
+            f'🔗 <a href="{link}">Mở nguồn</a>'
         )
         detail_parts = [
             details[start : start + TELEGRAM_MESSAGE_LIMIT]
@@ -355,7 +365,7 @@ def send_telegram(path: str, records: list[dict]) -> None:
         for message in messages:
             telegram_request(
                 message_endpoint,
-                {"chat_id": chat_id, "text": message},
+                {"chat_id": chat_id, "text": message, "parse_mode": "HTML"},
             )
         with open(path, "rb") as document:
             telegram_request(

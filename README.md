@@ -71,4 +71,4 @@ The configuration also reads the public order data rendered on XECONT.vn. This u
 
 The CSV includes collection time, published time, source, title, public contact phones found in the post, source URL, and a short content field. Verify every lead manually before contacting it. Do not use the pipeline for bulk unsolicited messages.
 
-Telegram receives the matching titles, sources, publication times, public phone numbers found, content, and source links. Long summaries are split into several messages to stay within Telegram's message limit; the CSV is also attached.
+Telegram receives a formatted HTML summary with icons, one block per lead, matching titles, sources, publication times, public phone numbers found, content, and clickable source links. Long summaries are split into several messages to stay within Telegram's message limit; the CSV is also attached.
