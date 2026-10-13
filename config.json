@@ -24,6 +24,26 @@
       "name": "Google News - reefer logistics",
       "url": "https://news.google.com/rss/search?q=reefer+container+Vietnam+logistics&hl=en-US&gl=US&ceid=US:en",
       "type": "rss"
+    },
+    {
+      "name": "Proship Logistic - Tin tức công khai",
+      "url": "https://proship.vn/feed/",
+      "type": "rss"
+    },
+    {
+      "name": "ContainerGo - Tin tức công khai",
+      "url": "https://containergo.vn/feed/",
+      "type": "rss"
+    },
+    {
+      "name": "Google News - container lanh Viet Nam",
+      "url": "https://news.google.com/rss/search?q=%22container+lanh%22+Vietnam&hl=vi&gl=VN&ceid=VN:vi",
+      "type": "rss"
+    },
+    {
+      "name": "Google News - 45RF Viet Nam",
+      "url": "https://news.google.com/rss/search?q=45RF+Vietnam&hl=vi&gl=VN&ceid=VN:vi",
+      "type": "rss"
     }
   ],
   "vehicle_terms": [
