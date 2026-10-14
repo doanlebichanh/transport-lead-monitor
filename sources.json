@@ -14,6 +14,22 @@
       "max_pages": 5,
       "sort_by": "CHRONOLOGICAL",
       "require_vehicle": false
+    },
+    {
+      "name": "Facebook - Hoi container Cat Lai",
+      "url": "https://www.facebook.com/groups/hoicontainercatlai",
+      "type": "scrapecreators_facebook_group",
+      "max_pages": 3,
+      "sort_by": "CHRONOLOGICAL",
+      "require_vehicle": false
+    },
+    {
+      "name": "Facebook - Xe tai tim hang Bac Nam",
+      "url": "https://www.facebook.com/groups/xetaitimhangbacnam",
+      "type": "scrapecreators_facebook_group",
+      "max_pages": 3,
+      "sort_by": "CHRONOLOGICAL",
+      "require_vehicle": false
     }
   ],
   "request_terms": [
