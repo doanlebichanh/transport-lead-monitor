@@ -109,7 +109,13 @@ def parse_scrapecreators_posts(source: dict, payload: dict) -> list[dict]:
         author_name = author.get("name", "") if isinstance(author, dict) else str(author)
         post_url = post.get("url") or post.get("post_url") or post.get("permalink") or source["url"]
         post_id = post.get("id") or post.get("post_id") or ""
-        published = post.get("published_at") or post.get("created_time") or post.get("timestamp") or ""
+        published = (
+            post.get("published_at")
+            or post.get("created_time")
+            or post.get("publishTime")
+            or post.get("timestamp")
+            or ""
+        )
         records.append(
             {
                 "source": source["name"],
@@ -134,8 +140,9 @@ def collect_scrapecreators(source: dict) -> list[dict]:
     records = []
     cursor = None
     max_pages = int(source.get("max_pages", 5))
+    sort_by = source.get("sort_by", "CHRONOLOGICAL")
     for _ in range(max_pages):
-        params = {"url": source["url"], "sort_by": "recent"}
+        params = {"url": source["url"], "sort_by": sort_by}
         if cursor:
             params["cursor"] = cursor
         response = requests.get(
@@ -144,7 +151,12 @@ def collect_scrapecreators(source: dict) -> list[dict]:
             params=params,
             timeout=60,
         )
-        response.raise_for_status()
+        if not response.ok:
+            detail = response.text.strip().replace(api_key, "***")
+            raise RuntimeError(
+                "ScrapeCreators group posts request failed with HTTP "
+                f"{response.status_code}: {detail[:500]}"
+            )
         payload = response.json()
         records.extend(parse_scrapecreators_posts(source, payload))
         pagination = payload.get("pagination") or payload.get("paging") or {}

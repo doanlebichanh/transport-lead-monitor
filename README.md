@@ -74,6 +74,8 @@ a bounded number of pages, and keeps posts only when they contain a request for 
 container/cargo or route signals. It does not use Facebook cookies, passwords, private-group
 access, automatic comments, or messages. ScrapeCreators currently limits this endpoint to
 three posts per request, so the source's `max_pages` controls the bounded number of requests.
+The endpoint's sort value is configured as `CHRONOLOGICAL`, matching ScrapeCreators'
+documented enum values.
 
 ## Report fields
 

@@ -12,6 +12,7 @@
       "url": "https://www.facebook.com/groups/693461916470952",
       "type": "scrapecreators_facebook_group",
       "max_pages": 5,
+      "sort_by": "CHRONOLOGICAL",
       "require_vehicle": false
     }
   ],
