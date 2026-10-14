@@ -148,6 +148,7 @@ def parse_xecont(source: dict, html: str) -> list[dict]:
                 "url": f"{source['url']}#order-{order_code}",
                 "published": order.get("posted_at") or order.get("published_at", ""),
                 "phones": [contact["phone"]] if contact.get("phone") else [],
+                "requires_route": source.get("require_route", False),
             }
         )
     return records
@@ -202,8 +203,9 @@ def filter_records(records: list[dict], config: dict) -> list[dict]:
             re.search(r"45\s*rf|48\s*rf", searchable) is not None
             or any(term in searchable for term in vehicle_terms)
         )
+        requires_route = record.get("requires_route", True)
         has_route = any(term in searchable for term in route_terms)
-        if not has_vehicle or not has_route:
+        if not has_vehicle or (requires_route and not has_route):
             continue
 
         key = record["url"] or hashlib.sha256(searchable.encode()).hexdigest()

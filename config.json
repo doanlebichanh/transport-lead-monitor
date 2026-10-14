@@ -3,7 +3,8 @@
     {
       "name": "XECONT - Don hang cong khai",
       "url": "https://www.xecont.vn/",
-      "type": "xecont"
+      "type": "xecont",
+      "require_route": false
     }
   ],
   "vehicle_terms": [
