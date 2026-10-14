@@ -67,6 +67,14 @@ The default configuration uses public RSS/Atom feeds only. It does not log in to
 
 The configuration also reads the public order data rendered on XECONT.vn. This uses only the public homepage response and does not log in or submit orders. The page may change its format; if that happens, the source is reported as failed while the other feeds continue.
 
+The configuration can also read public Facebook group posts through ScrapeCreators. Set the
+`SCRAPECREATORS_API_KEY` GitHub Actions secret and add only public groups that you are
+authorized to monitor. The collector uses the group's public URL, follows the API cursor for
+a bounded number of pages, and keeps posts only when they contain a request for a vehicle plus
+container/cargo or route signals. It does not use Facebook cookies, passwords, private-group
+access, automatic comments, or messages. ScrapeCreators currently limits this endpoint to
+three posts per request, so the source's `max_pages` controls the bounded number of requests.
+
 ## Report fields
 
 The CSV includes collection time, published time, source, title, public contact phones found in the post, source URL, and a short content field. Verify every lead manually before contacting it. Do not use the pipeline for bulk unsolicited messages.

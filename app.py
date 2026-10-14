@@ -23,6 +23,7 @@ SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 TELEGRAM_MAX_ATTEMPTS = 3
 TELEGRAM_TIMEOUT_SECONDS = 120
 TELEGRAM_MESSAGE_LIMIT = 3800
+SCRAPECREATORS_ENDPOINT = "https://api.scrapecreators.com/v1/facebook/group/posts"
 
 
 def normalize_text(value: str) -> str:
@@ -83,6 +84,79 @@ def parse_feed(source: dict) -> list[dict]:
                 "published": entry.get("published", entry.get("updated", "")),
             }
         )
+    return records
+
+
+def parse_scrapecreators_posts(source: dict, payload: dict) -> list[dict]:
+    candidates = payload.get("posts") or payload.get("data") or payload.get("results") or payload.get("items") or []
+    if isinstance(candidates, dict):
+        candidates = candidates.get("posts") or candidates.get("items") or candidates.get("data") or []
+    if not isinstance(candidates, list):
+        raise RuntimeError("ScrapeCreators returned an unsupported posts response.")
+
+    records = []
+    for post in candidates:
+        if not isinstance(post, dict):
+            continue
+        content = (
+            post.get("text")
+            or post.get("message")
+            or post.get("content")
+            or post.get("description")
+            or ""
+        )
+        author = post.get("author") or post.get("user") or {}
+        author_name = author.get("name", "") if isinstance(author, dict) else str(author)
+        post_url = post.get("url") or post.get("post_url") or post.get("permalink") or source["url"]
+        post_id = post.get("id") or post.get("post_id") or ""
+        published = post.get("published_at") or post.get("created_time") or post.get("timestamp") or ""
+        records.append(
+            {
+                "source": source["name"],
+                "source_url": source["url"],
+                "title": f"Facebook post by {author_name}".strip(),
+                "content": f"Author: {author_name}. {content}".strip(),
+                "url": post_url if post_url != source["url"] or not post_id else f"{post_url}#{post_id}",
+                "published": str(published),
+                "requires_route": False,
+                "requires_vehicle": False,
+                "social_post": True,
+            }
+        )
+    return records
+
+
+def collect_scrapecreators(source: dict) -> list[dict]:
+    api_key = os.environ.get("SCRAPECREATORS_API_KEY")
+    if not api_key:
+        raise RuntimeError("SCRAPECREATORS_API_KEY is not set.")
+
+    records = []
+    cursor = None
+    max_pages = int(source.get("max_pages", 5))
+    for _ in range(max_pages):
+        params = {"url": source["url"], "sort_by": "recent"}
+        if cursor:
+            params["cursor"] = cursor
+        response = requests.get(
+            SCRAPECREATORS_ENDPOINT,
+            headers={"x-api-key": api_key, "Accept": "application/json"},
+            params=params,
+            timeout=60,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        records.extend(parse_scrapecreators_posts(source, payload))
+        pagination = payload.get("pagination") or payload.get("paging") or {}
+        next_cursor = (
+            pagination.get("next_cursor")
+            or pagination.get("nextCursor")
+            or payload.get("next_cursor")
+            or payload.get("cursor")
+        )
+        if not next_cursor or next_cursor == cursor:
+            break
+        cursor = next_cursor
     return records
 
 
@@ -206,8 +280,11 @@ def parse_html(source: dict, html: str) -> list[dict]:
 
 
 def collect_source(source: dict) -> list[dict]:
-    if source.get("type", "rss").lower() == "rss":
+    source_type = source.get("type", "rss").lower()
+    if source_type == "rss":
         return parse_feed(source)
+    if source_type == "scrapecreators_facebook_group":
+        return collect_scrapecreators(source)
     html = requests.get(
         source["url"],
         headers={"User-Agent": "TransportLeadMonitor/1.0"},
@@ -222,6 +299,14 @@ def collect_source(source: dict) -> list[dict]:
 def filter_records(records: list[dict], config: dict) -> list[dict]:
     vehicle_terms = [normalize_text(term) for term in config["vehicle_terms"]]
     route_terms = [normalize_text(term) for term in config["route_terms"]]
+    request_terms = [
+        normalize_text(term)
+        for term in config.get(
+            "request_terms",
+            ["can xe", "tim xe", "can dau keo", "tim dau keo", "tim nha xe", "nhan chuyen"],
+        )
+    ]
+    cargo_terms = [normalize_text(term) for term in config.get("cargo_terms", [])]
     filtered = []
     seen = set()
 
@@ -234,6 +319,11 @@ def filter_records(records: list[dict], config: dict) -> list[dict]:
         requires_route = record.get("requires_route", True)
         requires_vehicle = record.get("requires_vehicle", True)
         has_route = any(term in searchable for term in route_terms)
+        if record.get("social_post"):
+            has_request = any(term in searchable for term in request_terms)
+            has_cargo_or_route = any(term in searchable for term in vehicle_terms + cargo_terms + route_terms)
+            if not has_request or not has_cargo_or_route:
+                continue
         if (requires_vehicle and not has_vehicle) or (requires_route and not has_route):
             continue
 

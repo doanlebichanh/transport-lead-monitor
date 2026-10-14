@@ -6,7 +6,37 @@
       "type": "xecont",
       "require_route": false,
       "require_vehicle": false
+    },
+    {
+      "name": "Facebook - Nhom van tai cong khai",
+      "url": "https://www.facebook.com/groups/693461916470952",
+      "type": "scrapecreators_facebook_group",
+      "max_pages": 5,
+      "require_vehicle": false
     }
+  ],
+  "request_terms": [
+    "can xe",
+    "tim xe",
+    "can dau keo",
+    "tim dau keo",
+    "tim nha xe",
+    "nhan chuyen",
+    "can cont",
+    "tim cont",
+    "hang chieu ve"
+  ],
+  "cargo_terms": [
+    "container",
+    "cont",
+    "dau keo",
+    "romooc",
+    "reefer",
+    "container lanh",
+    "cont lanh",
+    "hang qua canh",
+    "hang xuat khau",
+    "hang nhap khau"
   ],
   "vehicle_terms": [
     "45RF",
