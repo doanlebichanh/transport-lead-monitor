@@ -107,7 +107,12 @@ def parse_xecont(source: dict, html: str) -> list[dict]:
 
     records = []
     for order in orders:
+        if order.get("kind") not in (None, "need_truck"):
+            continue
+        if order.get("status") not in (None, "live"):
+            continue
         contact = order.get("contact") or order.get("shipper") or {}
+        poster = order.get("poster") or {}
         pickup = order.get("pickup") or order.get("from") or {}
         dropoff = order.get("dropoff") or order.get("to") or {}
         route = f"{order.get('route_from', pickup.get('province', ''))} - "
@@ -128,15 +133,37 @@ def parse_xecont(source: dict, html: str) -> list[dict]:
             or ""
         )
         temperature = order.get("temperature") or ""
+        pickup_location = ", ".join(
+            value
+            for value in (
+                pickup.get("address", ""),
+                pickup.get("ward", ""),
+                pickup.get("province", ""),
+            )
+            if value
+        )
+        dropoff_location = ", ".join(
+            value
+            for value in (
+                dropoff.get("address", ""),
+                dropoff.get("ward", ""),
+                dropoff.get("province", ""),
+            )
+            if value
+        )
         content = (
             f"Route: {route}. "
-            f"Pickup: {pickup.get('address', '')}. "
-            f"Drop-off: {dropoff.get('address', '')}. "
+            f"Pickup: {pickup_location}. "
+            f"Drop-off: {dropoff_location}. "
+            f"Owner: {poster.get('name') or contact.get('name', '')}. "
             f"Cargo: {cargo_type}. "
             f"Container: {container_type}. "
             f"Quantity: {quantity}. "
             f"Temperature: {temperature}. "
-            f"Pickup date: {pickup_date}."
+            f"Pickup date: {pickup_date}. "
+            f"End date: {order.get('end_date') or ''}. "
+            f"Time: {order.get('time_from') or ''} - {order.get('time_to') or ''}. "
+            f"Note: {order.get('note') or ''}."
         )
         order_code = order.get("code") or order.get("id", "order")
         records.append(
@@ -149,6 +176,7 @@ def parse_xecont(source: dict, html: str) -> list[dict]:
                 "published": order.get("posted_at") or order.get("published_at", ""),
                 "phones": [contact["phone"]] if contact.get("phone") else [],
                 "requires_route": source.get("require_route", False),
+                "requires_vehicle": source.get("require_vehicle", True),
             }
         )
     return records
@@ -204,8 +232,9 @@ def filter_records(records: list[dict], config: dict) -> list[dict]:
             or any(term in searchable for term in vehicle_terms)
         )
         requires_route = record.get("requires_route", True)
+        requires_vehicle = record.get("requires_vehicle", True)
         has_route = any(term in searchable for term in route_terms)
-        if not has_vehicle or (requires_route and not has_route):
+        if (requires_vehicle and not has_vehicle) or (requires_route and not has_route):
             continue
 
         key = record["url"] or hashlib.sha256(searchable.encode()).hexdigest()
